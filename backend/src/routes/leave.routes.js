@@ -1,50 +1,33 @@
 /**
- * src/routes/leave.routes.js
- * Leave module routes.
- *
- * POST  /leave/apply         — EMPLOYEE
- * GET   /leave/my            — EMPLOYEE
- * GET   /leave/all           — ADMIN, HR, PAYROLL
- * PATCH /leave/:id/approve   — PAYROLL only
- * PATCH /leave/:id/reject    — PAYROLL only
+ * src/routes/leave.routes.js — v2
+ * Added: POST /allocate (HR/Admin), GET /balance/:employeeId
+ * File upload middleware applied to POST /apply
  */
 
 import { Router } from "express";
 import * as leaveController from "../controllers/leave.controller.js";
 import { authenticateUser, authorizeRoles } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
-import { applyLeaveSchema } from "../validators/leave.validators.js";
+import { applyLeaveSchema, allocateLeaveSchema } from "../validators/leave.validators.js";
+import { handleLeaveUpload } from "../middleware/upload.middleware.js";
 
 const router = Router();
-
 router.use(authenticateUser);
 
-router.post(
-  "/apply",
-  authorizeRoles("EMPLOYEE"),
-  validate(applyLeaveSchema),
-  leaveController.applyLeave
-);
+// Employee applies (with optional document upload)
+router.post("/apply", authorizeRoles("EMPLOYEE", "HR", "ADMIN"), handleLeaveUpload, validate(applyLeaveSchema), leaveController.applyLeave);
 
-router.get("/my", leaveController.getMyLeaves);
+router.get("/my", authorizeRoles("EMPLOYEE"), leaveController.getMyLeaves);
+router.get("/all", authorizeRoles("ADMIN", "HR", "PAYROLL"), leaveController.getAllLeaves);
 
-router.get(
-  "/all",
-  authorizeRoles("ADMIN", "HR", "PAYROLL"),
-  leaveController.getAllLeaves
-);
+// Approval workflow (PAYROLL/ADMIN)
+router.patch("/:id/approve", authorizeRoles("PAYROLL", "ADMIN"), leaveController.approveLeave);
+router.patch("/:id/reject", authorizeRoles("PAYROLL", "ADMIN"), leaveController.rejectLeave);
 
-// Only PAYROLL officers manage the approval workflow
-router.patch(
-  "/:id/approve",
-  authorizeRoles("PAYROLL", "ADMIN"),
-  leaveController.approveLeave
-);
+// HR/Admin: allocate leave days to an employee (Issue #11)
+router.post("/allocate", authorizeRoles("HR", "ADMIN"), validate(allocateLeaveSchema), leaveController.allocateLeave);
 
-router.patch(
-  "/:id/reject",
-  authorizeRoles("PAYROLL", "ADMIN"),
-  leaveController.rejectLeave
-);
+// Leave balance (all authenticated)
+router.get("/balance/:employeeId", authorizeRoles("ADMIN", "HR", "PAYROLL", "EMPLOYEE"), leaveController.getLeaveBalance);
 
 export default router;

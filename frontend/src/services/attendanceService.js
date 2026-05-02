@@ -1,15 +1,20 @@
 import api from './api';
 
 const attendanceService = {
-  // Mark attendance — backend expects: { status, date?, checkInTime? }
-  // status: 'PRESENT' | 'ABSENT'
+  // Check-In: marks PRESENT with current time
   markAttendance: async () => {
     const now = new Date();
-    const checkInTime = now.toTimeString().split(' ')[0]; // HH:MM:SS format
-    const response = await api.post('/attendance/mark', {
+    const checkInTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
+    const response = await api.post('/attendance/checkin', {
       status: 'PRESENT',
       checkInTime,
     });
+    return response.data.data.attendance;
+  },
+
+  // Check-Out: records departure time (Issue #5 toggle)
+  checkOut: async () => {
+    const response = await api.post('/attendance/checkout');
     return response.data.data.attendance;
   },
 

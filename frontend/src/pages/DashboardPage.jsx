@@ -22,10 +22,9 @@ import {
   Area 
 } from 'recharts';
 import { useAuth } from '../context/AuthContext';
-import employeeService from '../services/employeeService';
+import payrollService from '../services/payrollService';
 import attendanceService from '../services/attendanceService';
 import leaveService from '../services/leaveService';
-import api from '../services/api';
 import toast from 'react-hot-toast';
 
 const DashboardPage = () => {
@@ -56,21 +55,16 @@ const DashboardPage = () => {
   const fetchAdminStats = async () => {
     try {
       setLoading(true);
-      const [emps, attendance, leaves] = await Promise.all([
-        employeeService.getAllEmployees(),
-        attendanceService.getAllAttendance(),
-        leaveService.getAllLeaves()
-      ]);
-      
-      const today = new Date().toISOString().split('T')[0];
-      const present = (attendance || []).filter(a => a.date === today).length;
-      
-      setStats({
-        totalEmployees: emps.length,
-        presentToday: present,
-        absentToday: emps.length - present,
-        pendingLeaves: (leaves || []).filter(l => l.status === 'PENDING').length
-      });
+      // Use real analytics endpoint
+      const data = await payrollService.getAdminStats().catch(() => null);
+      if (data) {
+        setStats({
+          totalEmployees: data.totalEmployees,
+          presentToday: data.checkedInToday,
+          absentToday: data.absentToday,
+          pendingLeaves: data.pendingLeaves,
+        });
+      }
     } catch (error) {
       console.error('Admin stats fetch error:', error);
     } finally {
@@ -138,7 +132,7 @@ const DashboardPage = () => {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-white">Hello, {user?.email?.split('@')[0]}! 👋</h2>
+          <h2 className="text-3xl font-bold text-white">Hello, {user?.name || user?.email?.split('@')[0]}! 👋</h2>
           <p className="text-gray-400">Here's what's happening at EmPay today.</p>
         </div>
         <div className="flex items-center space-x-3 bg-surface-input p-1 rounded-xl border border-surface-border">
@@ -160,7 +154,8 @@ const DashboardPage = () => {
       {activeTab === 'overview' ? (
         <div key="overview-tab" className="space-y-8 animate-in fade-in duration-500">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard title="Total Employees" value={stats.totalEmployees} icon={<Users className="text-primary" />} trend={12} color="bg-primary" />
+            {/* Issue #4: Total Employees only shown for Admin/HR/Payroll, not Employee */}
+            {isAdmin && <StatCard title="Total Employees" value={stats.totalEmployees} icon={<Users className="text-primary" />} trend={12} color="bg-primary" />}
             <StatCard title="Present Today" value={stats.presentToday} icon={<UserCheck className="text-green-500" />} trend={5} color="bg-green-500" />
             <StatCard title="On Leave" value={stats.absentToday} icon={<UserX className="text-red-500" />} trend={-2} color="bg-red-500" />
             <StatCard title="Pending Requests" value={stats.pendingLeaves} icon={<Clock className="text-blue-400" />} trend={24} color="bg-blue-400" />

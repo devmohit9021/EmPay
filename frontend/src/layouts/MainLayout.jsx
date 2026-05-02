@@ -14,6 +14,7 @@ const MainLayout = () => {
     if (pathname.startsWith('/leaves')) return 'Leave Management';
     if (pathname.startsWith('/payroll')) return 'Payroll & Payslips';
     if (pathname.startsWith('/settings')) return 'System Settings';
+    if (pathname.startsWith('/profile')) return 'My Profile';
     return 'EmPay';
   };
 

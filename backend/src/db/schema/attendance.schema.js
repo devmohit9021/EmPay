@@ -1,8 +1,8 @@
 /**
- * src/db/schema/attendance.schema.js
- * Drizzle schema for the `attendance` table.
- * Tracks daily attendance per employee.
- * Unique constraint on (employee_id, date) prevents duplicate entries.
+ * src/db/schema/attendance.schema.js — v2
+ * Added: check_out_time column.
+ * Status is now auto-derived in the service: if check_in_time is set → PRESENT.
+ * Employees use POST /attendance/checkin and POST /attendance/checkout as a toggle.
  */
 
 import {
@@ -17,7 +17,6 @@ import {
 import { relations } from "drizzle-orm";
 import { employees } from "./employees.schema.js";
 
-// Attendance status options
 export const attendanceStatusEnum = pgEnum("attendance_status", [
   "PRESENT",
   "ABSENT",
@@ -30,12 +29,12 @@ export const attendance = pgTable(
     employeeId: uuid("employee_id")
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
-    date: date("date").notNull(),             // ISO date string e.g. "2024-05-01"
+    date: date("date").notNull(),
     status: attendanceStatusEnum("status").notNull().default("PRESENT"),
-    checkInTime: time("check_in_time"),       // Optional check-in time
+    checkInTime: time("check_in_time"),
+    checkOutTime: time("check_out_time"),   // NEW: supports check-out toggle
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  // Composite unique constraint: one record per employee per day
   (table) => ({
     uniqueAttendancePerDay: unique().on(table.employeeId, table.date),
   })

@@ -162,3 +162,32 @@ export const getPayrollByEmployee = async (employeeId) => {
     .where(eq(payroll.employeeId, employeeId))
     .orderBy(payroll.year, payroll.month);
 };
+
+/**
+ * Fetches all payroll records across all employees.
+ * Used by Admin/Payroll Officer dashboard.
+ */
+export const getAllPayroll = async () => {
+  const { employees: emp, users } = await import("../db/schema/index.js");
+  return await db
+    .select({
+      id: payroll.id,
+      employeeId: payroll.employeeId,
+      month: payroll.month,
+      year: payroll.year,
+      baseSalary: payroll.baseSalary,
+      daysPresent: payroll.daysPresent,
+      leavesTaken: payroll.leavesTaken,
+      pfDeduction: payroll.pfDeduction,
+      professionalTax: payroll.professionalTax,
+      deductions: payroll.deductions,
+      netSalary: payroll.netSalary,
+      employeeName: users.name,
+      employeeCode: emp.employeeCode,
+      department: emp.department,
+    })
+    .from(payroll)
+    .leftJoin(emp, eq(payroll.employeeId, emp.id))
+    .leftJoin(users, eq(emp.userId, users.id))
+    .orderBy(payroll.year, payroll.month);
+};

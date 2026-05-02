@@ -1,8 +1,6 @@
 /**
- * src/routes/payroll.routes.js
- * Payroll module routes.
- *
- * POST /payroll/run — ADMIN, PAYROLL
+ * src/routes/payroll.routes.js — v2
+ * Added: GET /payroll (all records for Admin/Payroll dashboard)
  */
 
 import { Router } from "express";
@@ -12,14 +10,9 @@ import { validate } from "../middleware/validate.middleware.js";
 import { payrollRunSchema } from "../validators/payroll.validators.js";
 
 const router = Router();
-
 router.use(authenticateUser);
 
-router.post(
-  "/run",
-  authorizeRoles("ADMIN", "PAYROLL"),
-  validate(payrollRunSchema),
-  payrollController.runPayroll
-);
+router.get("/", authorizeRoles("ADMIN", "PAYROLL"), payrollController.getAllPayroll);
+router.post("/run", authorizeRoles("ADMIN", "PAYROLL"), validate(payrollRunSchema), payrollController.runPayroll);
 
 export default router;

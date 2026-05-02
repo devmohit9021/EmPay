@@ -1,13 +1,13 @@
 /**
- * src/index.js
- * Application entry point.
- * Bootstraps the Express server, loads environment variables,
- * mounts all routers, and starts listening.
+ * src/index.js — v2
+ * Added: analytics, settings routes + static uploads serving
  */
 
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/auth.routes.js";
 import employeeRoutes from "./routes/employee.routes.js";
@@ -15,8 +15,11 @@ import attendanceRoutes from "./routes/attendance.routes.js";
 import leaveRoutes from "./routes/leave.routes.js";
 import payrollRoutes from "./routes/payroll.routes.js";
 import payslipRoutes from "./routes/payslip.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
+import settingsRoutes from "./routes/settings.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -24,13 +27,12 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Serve uploaded files (e.g., leave documents) as static assets
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    service: "EmPay HRMS API",
-    timestamp: new Date().toISOString(),
-  });
+  res.json({ status: "ok", service: "EmPay HRMS API v2", timestamp: new Date().toISOString() });
 });
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
@@ -40,8 +42,10 @@ app.use("/attendance", attendanceRoutes);
 app.use("/leave", leaveRoutes);
 app.use("/payroll", payrollRoutes);
 app.use("/payslip", payslipRoutes);
+app.use("/analytics", analyticsRoutes);
+app.use("/settings", settingsRoutes);
 
-// ─── 404 Handler ─────────────────────────────────────────────────────────────
+// ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });
 });
@@ -49,9 +53,8 @@ app.use((_req, res) => {
 // ─── Centralized Error Handler ────────────────────────────────────────────────
 app.use(errorHandler);
 
-// ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🚀 EmPay HRMS API running on http://localhost:${PORT}`);
+  console.log(`\n🚀 EmPay HRMS API v2 running on http://localhost:${PORT}`);
   console.log(`📋 Environment: ${process.env.NODE_ENV || "development"}\n`);
 });
 

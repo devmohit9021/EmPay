@@ -96,7 +96,10 @@ const LoginPage = () => {
           </form>
 
         <div className="mt-8 text-center text-gray-400 text-sm">
-            Don't have an account? <Link to="/register" className="text-primary font-semibold hover:underline">Create Account</Link>
+            New organisation?{' '}
+            <Link to="/setup" className="text-primary font-semibold hover:underline inline-flex items-center space-x-1">
+              <span>Set Up Your Company</span>
+            </Link>
           </div>
         </div>
       </div>
