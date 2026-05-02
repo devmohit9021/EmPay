@@ -28,8 +28,13 @@ const LeavePage = () => {
 
   const isAdmin = ['ADMIN', 'HR', 'PAYROLL'].includes(user?.role);
 
+  const fetchedRef = React.useRef(false);
+
   useEffect(() => {
-    fetchLeaves();
+    if (!fetchedRef.current) {
+      fetchLeaves();
+      fetchedRef.current = true;
+    }
   }, []);
 
   const fetchLeaves = async () => {

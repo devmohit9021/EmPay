@@ -28,8 +28,13 @@ const PayrollPage = () => {
 
   const isAdmin = ['ADMIN', 'PAYROLL'].includes(user?.role);
 
+  const fetchedRef = React.useRef(false);
+
   useEffect(() => {
-    fetchData();
+    if (!fetchedRef.current) {
+      fetchData();
+      fetchedRef.current = true;
+    }
   }, []);
 
   const fetchData = async () => {

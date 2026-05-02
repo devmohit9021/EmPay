@@ -18,7 +18,7 @@ import { AppError } from "../utils/AppError.js";
  * - Stores the user in the database
  * - Returns a signed JWT token
  */
-export const registerUser = async ({ name, email, password, role }) => {
+export const registerUser = async ({ name, email, password, role, department, designation, baseSalary }) => {
   // Check if email already exists
   const [existing] = await db
     .select({ id: users.id })
@@ -46,13 +46,13 @@ export const registerUser = async ({ name, email, password, role }) => {
         createdAt: users.createdAt,
       });
 
-    // 2. Create a basic employee profile for the new user
-    // This prevents 404 errors on the dashboard when fetching employee-specific data
+    // 2. Create an employee profile for the new user
+    // Use provided values or defaults
     await tx.insert(employees).values({
       userId: newUser.id,
-      department: "General",
-      designation: role === "ADMIN" ? "Administrator" : "Associate",
-      baseSalary: "0",
+      department: department || "General",
+      designation: designation || (role === "ADMIN" ? "Administrator" : "Associate"),
+      baseSalary: baseSalary ? String(baseSalary) : "0",
     });
 
     const token = signToken({ id: newUser.id, email: newUser.email, role: newUser.role });

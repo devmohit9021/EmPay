@@ -10,8 +10,13 @@ const EmployeeListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
+  const fetchedRef = React.useRef(false);
+
   useEffect(() => {
-    fetchEmployees();
+    if (!fetchedRef.current) {
+      fetchEmployees();
+      fetchedRef.current = true;
+    }
   }, []);
 
   const fetchEmployees = async () => {

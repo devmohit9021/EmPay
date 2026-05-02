@@ -9,7 +9,7 @@ const SignupPage = () => {
     name: '',
     email: '',
     password: '',
-    role: 'EMPLOYEE' // Default role
+    role: 'HR' // Default role for public signup
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ const SignupPage = () => {
       toast.success('Account created successfully! Please login.');
       navigate('/login');
     } catch (error) {
-      console.error(error);
+      console.error('Registration error:', error.response?.data?.message || error.message);
       const data = error.response?.data;
       if (data?.errors) {
         // Show the first validation error
@@ -101,7 +101,6 @@ const SignupPage = () => {
                   onChange={(e) => setFormData({...formData, role: e.target.value})}
                   className="input-field pl-10 appearance-none cursor-pointer"
                 >
-                  <option value="EMPLOYEE">Employee</option>
                   <option value="HR">HR Manager</option>
                   <option value="PAYROLL">Payroll Manager</option>
                   <option value="ADMIN">Administrator</option>

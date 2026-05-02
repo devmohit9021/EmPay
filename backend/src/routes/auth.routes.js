@@ -9,7 +9,7 @@
 
 import { Router } from "express";
 import * as authController from "../controllers/auth.controller.js";
-import { authenticateUser } from "../middleware/auth.middleware.js";
+import { authenticateUser, authorizeRoles } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import {
   registerSchema,

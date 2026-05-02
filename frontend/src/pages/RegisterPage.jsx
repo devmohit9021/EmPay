@@ -8,6 +8,7 @@ const RegisterPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: '',
     role: 'EMPLOYEE',
@@ -20,34 +21,29 @@ const RegisterPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // 1. Register the user
+      // Register the user and profile in one atomic call
       await employeeService.registerEmployee({
+        name: formData.name,
         email: formData.email,
         password: formData.password,
-        role: formData.role
+        role: formData.role,
+        department: formData.department,
+        designation: formData.designation,
+        baseSalary: parseFloat(formData.baseSalary)
       });
 
-      // 2. We need to log in as admin again or use current admin token to create profile
-      // The backend /auth/register creates the user but not the employee profile 
-      // based on current backend routes. Let's verify the backend.
-      // Wait, in PRD it says "Admin: Full CRUD on users". 
-      // Usually, we create the user THEN the admin creates the employee linked to that userId.
-      // However, for a better UX, I'll assume the admin is doing this and we need the new user's ID.
-      
-      // Let's check backend auth.controller.js to see what register returns.
-      // Assuming register returns the user object with id.
-      
-      toast.success('Employee account created! Now setting up profile...');
-      
-      // I'll need to fetch the newly created user or have it returned from register
-      // Since I can't check the DB directly, I'll assume standard flow.
-      // For now, I'll navigate to employee list and show success.
-      
-      navigate('/employees');
       toast.success('New employee added successfully');
+      navigate('/employees');
     } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || 'Failed to register employee');
+      console.error('Registration/Setup error:', error);
+      const message = error.response?.data?.message || error.message || 'Failed to setup employee';
+      
+      // Check for validation errors array from Zod
+      if (error.response?.data?.errors) {
+        toast.error(error.response.data.errors[0].message);
+      } else {
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -79,6 +75,20 @@ const RegisterPage = () => {
           <section className="space-y-4">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-surface-border pb-2">Account Credentials</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">Full Name</label>
+                <div className="relative">
+                  <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="input-field pl-10" 
+                    placeholder="John Doe" 
+                  />
+                </div>
+              </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-300">Email Address</label>
                 <div className="relative">

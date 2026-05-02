@@ -7,6 +7,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchingRef = React.useRef(false);
+
   const fetchCurrentUser = async () => {
     const token = localStorage.getItem('empay_token');
     if (!token) {
@@ -14,19 +16,21 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
     try {
       const response = await api.get('/auth/me');
-      // Backend returns { success, data: { user } }
       setUser(response.data.data.user);
     } catch (error) {
       console.error('Failed to fetch user:', error);
-      // Only clear token on 401, not on network errors
       if (error.response?.status === 401) {
         localStorage.removeItem('empay_token');
       }
       setUser(null);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   };
 

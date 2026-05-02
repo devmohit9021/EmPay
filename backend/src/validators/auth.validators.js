@@ -25,6 +25,9 @@ export const registerSchema = z.object({
     })
     .optional()
     .default("EMPLOYEE"),
+  department: z.string().optional(),
+  designation: z.string().optional(),
+  baseSalary: z.number().or(z.string()).optional(),
 });
 
 export const loginSchema = z.object({

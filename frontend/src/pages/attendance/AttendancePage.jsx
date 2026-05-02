@@ -21,8 +21,13 @@ const AttendancePage = () => {
   const [markedToday, setMarkedToday] = useState(false);
   const isAdmin = ['ADMIN', 'HR', 'PAYROLL'].includes(user?.role);
 
+  const fetchedRef = React.useRef(false);
+
   useEffect(() => {
-    fetchLogs();
+    if (!fetchedRef.current) {
+      fetchLogs();
+      fetchedRef.current = true;
+    }
   }, []);
 
   const fetchLogs = async () => {

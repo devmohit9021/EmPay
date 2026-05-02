@@ -19,7 +19,8 @@ const LoginPage = () => {
       toast.success('Successfully logged in!');
       navigate('/');
     } catch (error) {
-      console.error(error);
+      // Log only the message, not the full error object to protect credentials
+      console.error('Login error:', error.response?.data?.message || error.message);
       const message = error.response?.data?.message || 'Login failed. Please check your credentials.';
       toast.error(message);
     } finally {
@@ -94,7 +95,7 @@ const LoginPage = () => {
             </button>
           </form>
 
-          <div className="mt-8 text-center text-gray-400 text-sm">
+        <div className="mt-8 text-center text-gray-400 text-sm">
             Don't have an account? <Link to="/register" className="text-primary font-semibold hover:underline">Create Account</Link>
           </div>
         </div>
