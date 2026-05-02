@@ -27,7 +27,6 @@ router.post(
 
 router.get(
   "/my",
-  authorizeRoles("EMPLOYEE"),
   attendanceController.getMyAttendance
 );
 

@@ -45,6 +45,25 @@ export const updateEmployee = async (req, res, next) => {
   }
 };
 
+export const getMyEmployeeProfile = async (req, res, next) => {
+  try {
+    // Find the employee profile linked to the authenticated user
+    const employee = await employeeService.getEmployeeByUserId(req.user.id);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'No employee profile found for your account. Contact HR.',
+      });
+    }
+    res.status(200).json({
+      success: true,
+      data: { employee },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getEmployeeById = async (req, res, next) => {
   try {
     const { id } = req.params;

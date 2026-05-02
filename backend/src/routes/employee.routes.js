@@ -35,6 +35,12 @@ router.get(
   employeeController.getAllEmployees
 );
 
+// GET /employees/me — any authenticated user can get their own employee profile
+router.get(
+  "/me",
+  employeeController.getMyEmployeeProfile
+);
+
 router.get(
   "/:id",
   authorizeRoles("ADMIN", "HR", "PAYROLL"),

@@ -26,7 +26,7 @@ router.post(
   leaveController.applyLeave
 );
 
-router.get("/my", authorizeRoles("EMPLOYEE"), leaveController.getMyLeaves);
+router.get("/my", leaveController.getMyLeaves);
 
 router.get(
   "/all",

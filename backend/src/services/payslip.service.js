@@ -65,9 +65,5 @@ export const getPayslipsForEmployee = async (
     .where(eq(payroll.employeeId, employeeId))
     .orderBy(payroll.year, payroll.month);
 
-  if (results.length === 0) {
-    throw new AppError("No payslips found for this employee.", 404);
-  }
-
   return results;
 };

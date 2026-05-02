@@ -7,7 +7,7 @@
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import db from "../db/connection.js";
-import { users } from "../db/schema/index.js";
+import { users, employees } from "../db/schema/index.js";
 import { signToken } from "../utils/jwt.utils.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -32,21 +32,33 @@ export const registerUser = async ({ name, email, password, role }) => {
   // Hash password with bcrypt (salt rounds = 12)
   const hashedPassword = await bcrypt.hash(password, 12);
 
-  // Insert user record
-  const [newUser] = await db
-    .insert(users)
-    .values({ name, email, password: hashedPassword, role })
-    .returning({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      role: users.role,
-      createdAt: users.createdAt,
+  // Use a transaction to ensure both user and employee profile are created
+  return await db.transaction(async (tx) => {
+    // 1. Insert user record
+    const [newUser] = await tx
+      .insert(users)
+      .values({ name, email, password: hashedPassword, role })
+      .returning({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        createdAt: users.createdAt,
+      });
+
+    // 2. Create a basic employee profile for the new user
+    // This prevents 404 errors on the dashboard when fetching employee-specific data
+    await tx.insert(employees).values({
+      userId: newUser.id,
+      department: "General",
+      designation: role === "ADMIN" ? "Administrator" : "Associate",
+      baseSalary: "0",
     });
 
-  const token = signToken({ id: newUser.id, email: newUser.email, role: newUser.role });
+    const token = signToken({ id: newUser.id, email: newUser.email, role: newUser.role });
 
-  return { user: newUser, token };
+    return { user: newUser, token };
+  });
 };
 
 /**
