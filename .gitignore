@@ -1,0 +1,6 @@
+node_modules/
+.env
+drizzle/
+dist/
+*.log
+.prd.md
