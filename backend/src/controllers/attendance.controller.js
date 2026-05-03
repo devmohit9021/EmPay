@@ -20,15 +20,25 @@ export const checkOut = async (req, res, next) => {
 
 export const getMyAttendance = async (req, res, next) => {
   try {
-    const records = await attendanceService.getMyAttendance(req.user.id);
+    const { page, limit } = req.query;
+    const filter = {
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 50
+    };
+    const records = await attendanceService.getMyAttendance(req.user.id, filter);
     res.status(200).json({ success: true, count: records.length, data: { attendance: records } });
   } catch (err) { next(err); }
 };
 
 export const getAllAttendance = async (req, res, next) => {
   try {
-    const { month, year } = req.query;
-    const filter = month && year ? { month: parseInt(month), year: parseInt(year) } : {};
+    const { month, year, page, limit } = req.query;
+    const filter = {
+      month: month ? parseInt(month) : undefined,
+      year: year ? parseInt(year) : undefined,
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 50
+    };
     const records = await attendanceService.getAllAttendance(filter);
     res.status(200).json({ success: true, count: records.length, data: { attendance: records } });
   } catch (err) { next(err); }

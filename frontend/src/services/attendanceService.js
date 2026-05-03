@@ -18,17 +18,15 @@ const attendanceService = {
     return response.data.data.attendance;
   },
 
-  getMyAttendance: async () => {
-    const response = await api.get('/attendance/my');
+  getMyAttendance: async (page = 1, limit = 50) => {
+    const response = await api.get(`/attendance/my?page=${page}&limit=${limit}`);
     return response.data.data.attendance;
   },
 
-  getAllAttendance: async (month, year) => {
-    let url = '/attendance/all';
-    const params = new URLSearchParams();
-    if (month) params.append('month', month);
-    if (year) params.append('year', year);
-    if (params.toString()) url += `?${params.toString()}`;
+  getAllAttendance: async (month, year, page = 1, limit = 50) => {
+    let url = `/attendance/all?page=${page}&limit=${limit}`;
+    if (month) url += `&month=${month}`;
+    if (year) url += `&year=${year}`;
 
     const response = await api.get(url);
     return response.data.data.attendance;

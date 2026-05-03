@@ -20,23 +20,20 @@ const AttendancePage = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [todayRecord, setTodayRecord] = useState(null); // today's attendance record
+  const [page, setPage] = useState(1);
+  const LIMIT = 50;
   const isAdmin = ['ADMIN', 'HR', 'PAYROLL'].includes(user?.role);
 
-  const fetchedRef = React.useRef(false);
-
   useEffect(() => {
-    if (!fetchedRef.current) {
-      fetchLogs();
-      fetchedRef.current = true;
-    }
-  }, []);
+    fetchLogs(page);
+  }, [page]);
 
-  const fetchLogs = async () => {
+  const fetchLogs = async (currentPage = 1) => {
     setLoading(true);
     try {
       const data = isAdmin
-        ? await attendanceService.getAllAttendance()
-        : await attendanceService.getMyAttendance();
+        ? await attendanceService.getAllAttendance(null, null, currentPage, LIMIT)
+        : await attendanceService.getMyAttendance(currentPage, LIMIT);
 
       setLogs(Array.isArray(data) ? data : []);
 
@@ -57,6 +54,9 @@ const AttendancePage = () => {
     }
   };
 
+  const handlePrev = () => { if (page > 1) setPage(p => p - 1); };
+  const handleNext = () => { if (logs.length === LIMIT) setPage(p => p + 1); };
+
   // Check-In handler
   const handleCheckIn = async () => {
     setActionLoading(true);
@@ -64,7 +64,7 @@ const AttendancePage = () => {
       const record = await attendanceService.markAttendance();
       toast.success('✅ Checked in successfully!');
       setTodayRecord(record);
-      fetchLogs();
+      fetchLogs(page);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to check in');
     } finally {
@@ -257,12 +257,22 @@ const AttendancePage = () => {
           </div>
 
           <div className="p-4 border-t border-surface-border flex items-center justify-between">
-            <span className="text-sm text-gray-400">Showing {logs.length} entries</span>
+            <span className="text-sm text-gray-400">
+              Showing {logs.length} entries (Page {page})
+            </span>
             <div className="flex items-center space-x-2">
-              <button className="p-1 rounded bg-surface-input border border-surface-border text-gray-400 hover:text-white disabled:opacity-50">
+              <button 
+                onClick={handlePrev} 
+                disabled={page === 1 || loading}
+                className="p-1 rounded bg-surface-input border border-surface-border text-gray-400 hover:text-white disabled:opacity-50"
+              >
                 <ChevronLeft size={18} />
               </button>
-              <button className="p-1 rounded bg-surface-input border border-surface-border text-gray-400 hover:text-white disabled:opacity-50">
+              <button 
+                onClick={handleNext} 
+                disabled={logs.length < LIMIT || loading}
+                className="p-1 rounded bg-surface-input border border-surface-border text-gray-400 hover:text-white disabled:opacity-50"
+              >
                 <ChevronRight size={18} />
               </button>
             </div>

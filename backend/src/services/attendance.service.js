@@ -9,7 +9,7 @@
 
 import { eq, and, between } from "drizzle-orm";
 import db from "../db/connection.js";
-import { attendance } from "../db/schema/index.js";
+import { attendance, employees, users } from "../db/schema/index.js";
 import { getEmployeeByUserId } from "./employee.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -86,34 +86,74 @@ export const checkOut = async (userId) => {
 };
 
 /**
- * Employee's own attendance history.
+ * Employee's own attendance history with pagination.
  */
-export const getMyAttendance = async (userId) => {
+export const getMyAttendance = async (userId, { page = 1, limit = 50 } = {}) => {
   const employee = await getEmployeeByUserId(userId);
   if (!employee) throw new AppError("No employee profile found for your account.", 404);
 
+  const offset = (page - 1) * limit;
+
   return await db
-    .select()
+    .select({
+      id: attendance.id,
+      date: attendance.date,
+      status: attendance.status,
+      checkInTime: attendance.checkInTime,
+      checkOutTime: attendance.checkOutTime,
+      employee: {
+        id: employees.id,
+        user: {
+          name: users.name,
+          email: users.email
+        }
+      }
+    })
     .from(attendance)
+    .innerJoin(employees, eq(attendance.employeeId, employees.id))
+    .innerJoin(users, eq(employees.userId, users.id))
     .where(eq(attendance.employeeId, employee.id))
-    .orderBy(attendance.date);
+    .orderBy(attendance.date, "desc")
+    .limit(limit)
+    .offset(offset);
 };
 
 /**
- * All attendance (Admin, HR, Payroll) — with optional month/year filter.
+ * All attendance (Admin, HR, Payroll) — with optional month/year filter and pagination.
  */
-export const getAllAttendance = async ({ month, year } = {}) => {
+export const getAllAttendance = async ({ month, year, page = 1, limit = 50 } = {}) => {
+  const offset = (page - 1) * limit;
+
+  let query = db
+    .select({
+      id: attendance.id,
+      date: attendance.date,
+      status: attendance.status,
+      checkInTime: attendance.checkInTime,
+      checkOutTime: attendance.checkOutTime,
+      employee: {
+        id: employees.id,
+        user: {
+          name: users.name,
+          email: users.email
+        }
+      }
+    })
+    .from(attendance)
+    .innerJoin(employees, eq(attendance.employeeId, employees.id))
+    .innerJoin(users, eq(employees.userId, users.id));
+
   if (month && year) {
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
     const lastDay = new Date(year, month, 0).getDate();
     const endDate = `${year}-${String(month).padStart(2, "0")}-${lastDay}`;
-    return await db
-      .select()
-      .from(attendance)
-      .where(between(attendance.date, startDate, endDate))
-      .orderBy(attendance.date);
+    query = query.where(between(attendance.date, startDate, endDate));
   }
-  return await db.select().from(attendance).orderBy(attendance.date);
+
+  return await query
+    .orderBy(attendance.date, "desc")
+    .limit(limit)
+    .offset(offset);
 };
 
 /**
