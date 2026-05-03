@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Clock, 
   CheckCircle,
+  LogOut,
   Calendar,
   Search,
   ChevronLeft,
@@ -18,7 +19,7 @@ const AttendancePage = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [markedToday, setMarkedToday] = useState(false);
+  const [todayRecord, setTodayRecord] = useState(null); // today's attendance record
   const isAdmin = ['ADMIN', 'HR', 'PAYROLL'].includes(user?.role);
 
   const fetchedRef = React.useRef(false);
@@ -39,15 +40,14 @@ const AttendancePage = () => {
 
       setLogs(Array.isArray(data) ? data : []);
 
-      // Check if employee already marked attendance today
+      // Find today's record for the employee
       if (!isAdmin && Array.isArray(data)) {
         const today = new Date().toISOString().split('T')[0];
         const todayLog = data.find(log => log.date?.startsWith(today));
-        setMarkedToday(!!todayLog);
+        setTodayRecord(todayLog || null);
       }
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to fetch attendance';
-      // Silently handle if no employee profile yet
       if (!msg.includes('employee profile')) {
         toast.error(msg);
       }
@@ -57,63 +57,112 @@ const AttendancePage = () => {
     }
   };
 
-  const handleMarkAttendance = async () => {
+  // Check-In handler
+  const handleCheckIn = async () => {
     setActionLoading(true);
     try {
-      await attendanceService.markAttendance();
-      toast.success('Attendance marked successfully!');
-      setMarkedToday(true);
+      const record = await attendanceService.markAttendance();
+      toast.success('✅ Checked in successfully!');
+      setTodayRecord(record);
       fetchLogs();
     } catch (error) {
-      const msg = error.response?.data?.message || 'Failed to mark attendance';
-      toast.error(msg);
+      toast.error(error.response?.data?.message || 'Failed to check in');
     } finally {
       setActionLoading(false);
     }
   };
 
+  // Check-Out handler (Issue #5 — red → green toggle)
+  const handleCheckOut = async () => {
+    setActionLoading(true);
+    try {
+      const record = await attendanceService.checkOut();
+      toast.success('🔴 Checked out successfully!');
+      setTodayRecord(record);
+      fetchLogs();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to check out');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const checkedIn = !!todayRecord?.checkInTime;
+  const checkedOut = !!todayRecord?.checkOutTime;
+
   return (
     <div className="space-y-6">
-      {/* Attendance Control for Employees */}
+      {/* Attendance Control for Employees — Check-In / Check-Out Toggle */}
       {!isAdmin && (
         <div className="glass-card p-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex items-center space-x-6">
-              <div className={`h-20 w-20 rounded-2xl flex items-center justify-center ${markedToday ? 'bg-green-500 bg-opacity-20 text-green-500' : 'bg-primary bg-opacity-20 text-primary'} border border-opacity-30 border-current shadow-lg`}>
+              <div className={`h-20 w-20 rounded-2xl flex items-center justify-center border border-opacity-30 border-current shadow-lg transition-all ${
+                checkedOut
+                  ? 'bg-red-500 bg-opacity-20 text-red-500'
+                  : checkedIn
+                  ? 'bg-green-500 bg-opacity-20 text-green-500'
+                  : 'bg-primary bg-opacity-20 text-primary'
+              }`}>
                 <Clock size={40} />
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-white mb-1">
-                  {markedToday ? '✅ Attendance Marked!' : 'Mark Your Attendance'}
+                  {checkedOut ? '🔴 Checked Out' : checkedIn ? '🟢 Currently Checked In' : 'Mark Your Attendance'}
                 </h2>
                 <p className="text-gray-400">
                   {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
-                {markedToday && (
-                  <p className="text-green-500 text-sm font-medium mt-1">You have already clocked in today.</p>
+                {checkedIn && (
+                  <p className="text-green-400 text-sm font-medium mt-1">
+                    Check-in: {todayRecord.checkInTime}
+                    {todayRecord.checkOutTime && <span className="text-red-400 ml-3">Check-out: {todayRecord.checkOutTime}</span>}
+                  </p>
                 )}
               </div>
             </div>
 
+            {/* Toggle Buttons */}
             <div className="flex items-center space-x-4">
-              <button
-                onClick={handleMarkAttendance}
-                disabled={actionLoading || markedToday}
-                className={`flex items-center space-x-3 px-12 py-4 rounded-lg font-bold text-lg transition-all ${
-                  markedToday
-                    ? 'bg-green-500 bg-opacity-20 text-green-500 cursor-not-allowed border border-green-500 border-opacity-30'
-                    : 'btn-primary shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transform'
-                }`}
-              >
-                {actionLoading ? (
-                  <div className="h-6 w-6 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <CheckCircle size={24} />
-                    <span>{markedToday ? 'Marked Present' : 'Mark Present'}</span>
-                  </>
-                )}
-              </button>
+              {!checkedIn && !checkedOut && (
+                <button
+                  onClick={handleCheckIn}
+                  disabled={actionLoading}
+                  className="flex items-center space-x-3 px-10 py-4 rounded-lg font-bold text-lg btn-primary shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transform transition-all"
+                >
+                  {actionLoading ? (
+                    <div className="h-6 w-6 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle size={24} />
+                      <span>Check In</span>
+                    </>
+                  )}
+                </button>
+              )}
+
+              {checkedIn && !checkedOut && (
+                <button
+                  onClick={handleCheckOut}
+                  disabled={actionLoading}
+                  className="flex items-center space-x-3 px-10 py-4 rounded-lg font-bold text-lg bg-red-500 bg-opacity-20 text-red-500 hover:bg-red-500 hover:text-white border border-red-500 border-opacity-40 hover:scale-105 active:scale-95 transform transition-all"
+                >
+                  {actionLoading ? (
+                    <div className="h-6 w-6 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <LogOut size={24} />
+                      <span>Check Out</span>
+                    </>
+                  )}
+                </button>
+              )}
+
+              {checkedOut && (
+                <div className="px-10 py-4 rounded-lg font-bold text-lg bg-gray-500 bg-opacity-20 text-gray-400 border border-gray-500 border-opacity-30 cursor-not-allowed">
+                  Day Complete ✓
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -145,27 +194,28 @@ const AttendancePage = () => {
                 <tr className="bg-surface-hover text-gray-400 text-xs uppercase tracking-wider">
                   {isAdmin && <th className="px-6 py-4 font-semibold">Employee</th>}
                   <th className="px-6 py-4 font-semibold">Date</th>
-                  <th className="px-6 py-4 font-semibold">Check-In Time</th>
+                  <th className="px-6 py-4 font-semibold">Check-In</th>
+                  <th className="px-6 py-4 font-semibold">Check-Out</th>
                   <th className="px-6 py-4 font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
                 {loading ? (
                   <tr>
-                    <td colSpan={isAdmin ? 4 : 3} className="px-6 py-12 text-center text-gray-400">
+                    <td colSpan={isAdmin ? 5 : 4} className="px-6 py-12 text-center text-gray-400">
                       <div className="flex justify-center">
-                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       </div>
                     </td>
                   </tr>
                 ) : logs.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? 4 : 3} className="px-6 py-12 text-center">
+                    <td colSpan={isAdmin ? 5 : 4} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center space-y-3 text-gray-500">
                         <AlertCircle size={32} className="text-gray-600" />
                         <p className="italic">No attendance records found.</p>
-                        {!isAdmin && !markedToday && (
-                          <p className="text-primary text-sm font-medium">Click "Mark Present" to record today's attendance!</p>
+                        {!isAdmin && !checkedIn && (
+                          <p className="text-primary text-sm font-medium">Click "Check In" to record today's attendance!</p>
                         )}
                       </div>
                     </td>
@@ -175,7 +225,7 @@ const AttendancePage = () => {
                     <tr key={log.id} className="hover:bg-surface-hover transition-colors">
                       {isAdmin && (
                         <td className="px-6 py-4 text-sm font-medium text-white">
-                          {log.employee?.user?.email?.split('@')[0] || '—'}
+                          {log.employee?.user?.name || log.employee?.user?.email?.split('@')[0] || '—'}
                         </td>
                       )}
                       <td className="px-6 py-4 text-sm text-gray-300">
@@ -187,8 +237,13 @@ const AttendancePage = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm">
+                        <span className="text-red-400 font-mono font-medium">
+                          {log.checkOutTime || '—'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm">
                         <div className="flex items-center space-x-2">
-                          <div className={`h-2 w-2 rounded-full ${log.status === 'PRESENT' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`h-2 w-2 rounded-full ${log.status === 'PRESENT' ? 'bg-green-500' : 'bg-red-500'}`} />
                           <span className={log.status === 'PRESENT' ? 'text-green-500' : 'text-red-500'}>
                             {log.status || '—'}
                           </span>

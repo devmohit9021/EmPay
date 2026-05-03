@@ -18,7 +18,7 @@
 
 import { eq, and, inArray } from "drizzle-orm";
 import db from "../db/connection.js";
-import { employees, payroll, payslips } from "../db/schema/index.js";
+import { employees, payroll, payslips, users } from "../db/schema/index.js";
 import { countDaysPresent } from "./attendance.service.js";
 import { countApprovedLeaveDays } from "./leave.service.js";
 import { calculateNetSalary } from "../utils/payroll.utils.js";
@@ -85,7 +85,7 @@ export const runPayroll = async ({ month, year, employeeIds, totalWorkingDays })
 
       // ── Step 3: Gather payroll inputs ──────────────────────────────────────
       const daysPresent = await countDaysPresent(employee.id, month, year);
-      const leavesTaken = await countApprovedLeaveDays(employee.id, month, year);
+      const { totalPaid: leavesTaken, totalUnpaid: unpaidLeaves } = await countApprovedLeaveDays(employee.id, month, year);
       const baseSalary = Number(employee.baseSalary);
 
       // ── Step 4: Run the calculation engine ────────────────────────────────
@@ -94,6 +94,7 @@ export const runPayroll = async ({ month, year, employeeIds, totalWorkingDays })
           baseSalary,
           daysPresent,
           leavesTaken,
+          unpaidLeaves,
           totalWorkingDays,
         });
 
@@ -107,6 +108,7 @@ export const runPayroll = async ({ month, year, employeeIds, totalWorkingDays })
           baseSalary: String(baseSalary),
           daysPresent,
           leavesTaken,
+          unpaidLeaves,
           pfDeduction: String(pfDeduction),
           professionalTax: String(professionalTax),
           deductions: String(deductions),
@@ -127,6 +129,7 @@ export const runPayroll = async ({ month, year, employeeIds, totalWorkingDays })
         baseSalary,
         daysPresent,
         leavesTaken,
+        unpaidLeaves,
         deductions,
         netSalary,
       });
@@ -152,13 +155,180 @@ export const runPayroll = async ({ month, year, employeeIds, totalWorkingDays })
 };
 
 /**
- * Fetches payroll records for a specific employee.
- * Used for payslip retrieval.
+ * Fetches all payroll records across all employees.
+ * Used by Admin/Payroll Officer dashboard.
+ */
+export const getAllPayroll = async () => {
+  const records = await db
+    .select({
+      id: payroll.id,
+      employeeId: payroll.employeeId,
+      month: payroll.month,
+      year: payroll.year,
+      baseSalary: payroll.baseSalary,
+      daysPresent: payroll.daysPresent,
+      leavesTaken: payroll.leavesTaken,
+      unpaidLeaves: payroll.unpaidLeaves,
+      pfDeduction: payroll.pfDeduction,
+      professionalTax: payroll.professionalTax,
+      deductions: payroll.deductions,
+      netSalary: payroll.netSalary,
+      employeeName: users.name,
+      employeeCode: employees.employeeCode,
+      department: employees.department,
+    })
+    .from(payroll)
+    .leftJoin(employees, eq(payroll.employeeId, employees.id))
+    .leftJoin(users, eq(employees.userId, users.id))
+    .orderBy(payroll.year, payroll.month);
+
+  return records.map(r => {
+    const totalWorkingDays = Number(process.env.TOTAL_WORKING_DAYS) || 26;
+    const payableDays = Math.min(r.daysPresent + r.leavesTaken, totalWorkingDays);
+    
+    // User requested to calculate Net Salary directly from Basic Salary,
+    // which implies Gross Salary = Basic Salary.
+    const grossSalary = Number(r.baseSalary);
+    
+    // Clamp old deductions from DB so they don't exceed gross (e.g. 0 pay should not have 200 deduction)
+    let deductions = Number(r.deductions);
+    let professionalTax = Number(r.professionalTax);
+    if (deductions > grossSalary) {
+      deductions = grossSalary;
+      professionalTax = Math.max(0, deductions - Number(r.pfDeduction));
+    }
+    
+    return {
+      ...r,
+      name: r.employeeName, // map to expected frontend key
+      grossSalary: parseFloat(grossSalary.toFixed(2)),
+      deductions: parseFloat(deductions.toFixed(2)),
+      professionalTax: parseFloat(professionalTax.toFixed(2)),
+      payableDays,
+      totalWorkingDays,
+      alreadyProcessed: true,
+    };
+  });
+};
+
+/**
+ * Fetch payroll history for a single employee
  */
 export const getPayrollByEmployee = async (employeeId) => {
-  return await db
-    .select()
+  const records = await db
+    .select({
+      id: payroll.id,
+      employeeId: payroll.employeeId,
+      month: payroll.month,
+      year: payroll.year,
+      baseSalary: payroll.baseSalary,
+      daysPresent: payroll.daysPresent,
+      leavesTaken: payroll.leavesTaken,
+      unpaidLeaves: payroll.unpaidLeaves,
+      pfDeduction: payroll.pfDeduction,
+      professionalTax: payroll.professionalTax,
+      deductions: payroll.deductions,
+      netSalary: payroll.netSalary,
+      employeeName: users.name,
+      employeeCode: employees.employeeCode,
+      department: employees.department,
+      designation: employees.designation,
+    })
     .from(payroll)
+    .leftJoin(employees, eq(payroll.employeeId, employees.id))
+    .leftJoin(users, eq(employees.userId, users.id))
     .where(eq(payroll.employeeId, employeeId))
     .orderBy(payroll.year, payroll.month);
+
+  return records.map(r => {
+    const totalWorkingDays = Number(process.env.TOTAL_WORKING_DAYS) || 26;
+    const payableDays = Math.min(r.daysPresent + r.leavesTaken, totalWorkingDays);
+    
+    // User requested to calculate Net Salary directly from Basic Salary,
+    // which implies Gross Salary = Basic Salary.
+    const grossSalary = Number(r.baseSalary);
+    
+    // Clamp old deductions from DB so they don't exceed gross (e.g. 0 pay should not have 200 deduction)
+    let deductions = Number(r.deductions);
+    let professionalTax = Number(r.professionalTax);
+    if (deductions > grossSalary) {
+      deductions = grossSalary;
+      professionalTax = Math.max(0, deductions - Number(r.pfDeduction));
+    }
+    
+    return {
+      ...r,
+      name: r.employeeName,
+      grossSalary: parseFloat(grossSalary.toFixed(2)),
+      deductions: parseFloat(deductions.toFixed(2)),
+      professionalTax: parseFloat(professionalTax.toFixed(2)),
+      payableDays,
+      totalWorkingDays,
+      alreadyProcessed: true,
+    };
+  });
+};
+/**
+ * Preview payroll for all employees for a given month/year.
+ * Performs full calculation but does NOT write to the database.
+ * Used by the frontend to show a "what-if" table before committing the payrun.
+ */
+export const previewPayroll = async ({ month, year, totalWorkingDays }) => {
+  const allEmployees = await db
+    .select({
+      id: employees.id,
+      employeeCode: employees.employeeCode,
+      department: employees.department,
+      designation: employees.designation,
+      baseSalary: employees.baseSalary,
+      name: users.name,
+      email: users.email,
+    })
+    .from(employees)
+    .leftJoin(users, eq(employees.userId, users.id));
+
+  const workingDays = totalWorkingDays || Number(process.env.TOTAL_WORKING_DAYS) || 26;
+  const preview = [];
+
+  for (const emp of allEmployees) {
+    const daysPresent  = await countDaysPresent(emp.id, month, year);
+    const { totalPaid: leavesTaken, totalUnpaid: unpaidLeaves }  = await countApprovedLeaveDays(emp.id, month, year);
+    const baseSalary   = Number(emp.baseSalary) || 0;
+
+    // Check if payroll already run for this month
+    const [existing] = await db
+      .select({ id: payroll.id, netSalary: payroll.netSalary })
+      .from(payroll)
+      .where(and(eq(payroll.employeeId, emp.id), eq(payroll.month, month), eq(payroll.year, year)));
+
+    let calc = { grossSalary: 0, pfDeduction: 0, professionalTax: 0, deductions: 0, netSalary: 0 };
+    if (baseSalary > 0) {
+      calc = calculateNetSalary({ baseSalary, daysPresent, leavesTaken, unpaidLeaves, totalWorkingDays: workingDays });
+    }
+
+    preview.push({
+      employeeId:     emp.id,
+      employeeCode:   emp.employeeCode,
+      name:           emp.name || emp.email?.split('@')[0] || 'Unknown',
+      department:     emp.department,
+      designation:    emp.designation,
+      baseSalary,
+      daysPresent,
+      leavesTaken,
+      unpaidLeaves,
+      payableDays:    Math.min(daysPresent + leavesTaken, workingDays),
+      totalWorkingDays: workingDays,
+      grossSalary:    calc.grossSalary,
+      pfDeduction:    calc.pfDeduction,
+      professionalTax: calc.professionalTax,
+      deductions:     calc.deductions,
+      netSalary:      calc.netSalary,
+      alreadyProcessed: !!existing,
+      payrollId:      existing?.id || null,
+      month,
+      year,
+    });
+  }
+
+  return preview;
 };

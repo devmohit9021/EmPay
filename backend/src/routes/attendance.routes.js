@@ -1,11 +1,6 @@
 /**
- * src/routes/attendance.routes.js
- * Attendance module routes.
- *
- * POST /attendance/mark — EMPLOYEE (marks own attendance)
- * GET  /attendance/my   — EMPLOYEE (own history)
- * GET  /attendance/all  — ADMIN, HR, PAYROLL
- *       ?month=5&year=2024 — optional filter
+ * src/routes/attendance.routes.js — v2
+ * Added: POST /checkout
  */
 
 import { Router } from "express";
@@ -15,25 +10,17 @@ import { validate } from "../middleware/validate.middleware.js";
 import { markAttendanceSchema } from "../validators/attendance.validators.js";
 
 const router = Router();
-
 router.use(authenticateUser);
 
-router.post(
-  "/mark",
-  authorizeRoles("EMPLOYEE"),
-  validate(markAttendanceSchema),
-  attendanceController.markAttendance
-);
+// Check-In
+router.post("/checkin", authorizeRoles("EMPLOYEE"), validate(markAttendanceSchema), attendanceController.markAttendance);
+// Keep old /mark route as alias for backward compatibility
+router.post("/mark", authorizeRoles("EMPLOYEE"), validate(markAttendanceSchema), attendanceController.markAttendance);
 
-router.get(
-  "/my",
-  attendanceController.getMyAttendance
-);
+// Check-Out toggle (Issue #5)
+router.post("/checkout", authorizeRoles("EMPLOYEE"), attendanceController.checkOut);
 
-router.get(
-  "/all",
-  authorizeRoles("ADMIN", "HR", "PAYROLL"),
-  attendanceController.getAllAttendance
-);
+router.get("/my", authorizeRoles("EMPLOYEE"), attendanceController.getMyAttendance);
+router.get("/all", authorizeRoles("ADMIN", "HR", "PAYROLL"), attendanceController.getAllAttendance);
 
 export default router;

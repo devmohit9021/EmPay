@@ -11,7 +11,6 @@ const RegisterPage = () => {
     name: '',
     email: '',
     password: '',
-    role: 'EMPLOYEE',
     department: '',
     designation: '',
     baseSalary: ''
@@ -21,12 +20,11 @@ const RegisterPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Register the user and profile in one atomic call
+      // Register creates user with EMPLOYEE role — Admin assigns actual role via Settings
       await employeeService.registerEmployee({
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        role: formData.role,
         department: formData.department,
         designation: formData.designation,
         baseSalary: parseFloat(formData.baseSalary)
@@ -35,10 +33,7 @@ const RegisterPage = () => {
       toast.success('New employee added successfully');
       navigate('/employees');
     } catch (error) {
-      console.error('Registration/Setup error:', error);
-      const message = error.response?.data?.message || error.message || 'Failed to setup employee';
-      
-      // Check for validation errors array from Zod
+      const message = error.response?.data?.message || error.message || 'Failed to create employee';
       if (error.response?.data?.errors) {
         toast.error(error.response.data.errors[0].message);
       } else {
@@ -49,9 +44,11 @@ const RegisterPage = () => {
     }
   };
 
+  const set = (field) => (e) => setFormData({ ...formData, [field]: e.target.value });
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <button 
+      <button
         onClick={() => navigate('/employees')}
         className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
       >
@@ -66,133 +63,142 @@ const RegisterPage = () => {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white">Add New Employee</h2>
-            <p className="text-gray-400 text-sm">Create a new user account and employee profile</p>
+            <p className="text-gray-400 text-sm">Create a new user account. Role is assigned via Settings after creation.</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Account Information Section */}
+
+          {/* ── Section 1: Account Credentials ─────────────────────────── */}
           <section className="space-y-4">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-surface-border pb-2">Account Credentials</h3>
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-surface-border pb-2">
+              Account Credentials
+            </h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-300">Full Name</label>
                 <div className="relative">
                   <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     required
                     value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="input-field pl-10" 
-                    placeholder="John Doe" 
+                    onChange={set('name')}
+                    className="input-field pl-10"
+                    placeholder="John Doe"
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-300">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     required
                     value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="input-field pl-10" 
-                    placeholder="employee@company.com" 
+                    onChange={set('email')}
+                    className="input-field pl-10"
+                    placeholder="employee@company.com"
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-300">Temporary Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="password" 
+                  <input
+                    type="password"
                     required
+                    minLength={8}
                     value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="input-field pl-10" 
-                    placeholder="••••••••" 
+                    onChange={set('password')}
+                    className="input-field pl-10"
+                    placeholder="Min. 8 characters"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">System Role</label>
-                <div className="relative">
-                  <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <select 
-                    value={formData.role}
-                    onChange={(e) => setFormData({...formData, role: e.target.value})}
-                    className="input-field pl-10 appearance-none"
-                  >
-                    <option value="EMPLOYEE">Employee</option>
-                    <option value="HR">HR Officer</option>
-                    <option value="PAYROLL">Payroll Officer</option>
-                    <option value="ADMIN">System Admin</option>
-                  </select>
-                </div>
-              </div>
+            </div>
+
+            {/* Role info — no dropdown */}
+            <div className="flex items-start space-x-3 p-4 bg-primary bg-opacity-10 rounded-xl border border-primary border-opacity-20">
+              <ShieldCheck className="text-primary flex-shrink-0 mt-0.5" size={18} />
+              <p className="text-sm text-gray-300">
+                This account will be created with the{' '}
+                <span className="text-primary font-bold">Employee</span> role.
+                You can promote them later in{' '}
+                <span className="text-white font-semibold">Settings → User Roles</span>.
+              </p>
             </div>
           </section>
 
-          {/* Profile Information Section */}
+          {/* ── Section 2: Professional Profile ─────────────────────────── */}
           <section className="space-y-4">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-surface-border pb-2">Professional Profile</h3>
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b border-surface-border pb-2">
+              Professional Profile
+            </h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-300">Department</label>
                 <div className="relative">
                   <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     required
                     value={formData.department}
-                    onChange={(e) => setFormData({...formData, department: e.target.value})}
-                    className="input-field pl-10" 
-                    placeholder="e.g. Engineering" 
+                    onChange={set('department')}
+                    className="input-field pl-10"
+                    placeholder="e.g. Engineering"
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-300">Designation</label>
                 <div className="relative">
                   <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     required
                     value={formData.designation}
-                    onChange={(e) => setFormData({...formData, designation: e.target.value})}
-                    className="input-field pl-10" 
-                    placeholder="e.g. Senior Developer" 
+                    onChange={set('designation')}
+                    className="input-field pl-10"
+                    placeholder="e.g. Senior Developer"
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">Monthly Base Salary</label>
+                <label className="block text-sm font-medium text-gray-300">Monthly Base Salary (₹)</label>
                 <div className="relative">
                   <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     required
+                    min={0}
                     value={formData.baseSalary}
-                    onChange={(e) => setFormData({...formData, baseSalary: e.target.value})}
-                    className="input-field pl-10" 
-                    placeholder="e.g. 50000" 
+                    onChange={set('baseSalary')}
+                    className="input-field pl-10"
+                    placeholder="e.g. 50000"
                   />
                 </div>
               </div>
             </div>
           </section>
 
+          {/* ── Submit ───────────────────────────────────────────────────── */}
           <div className="flex justify-end pt-6 border-t border-surface-border">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="btn-primary flex items-center space-x-2 py-3 px-10"
             >
               {loading ? (
-                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
                   <UserPlus size={20} />
@@ -201,6 +207,7 @@ const RegisterPage = () => {
               )}
             </button>
           </div>
+
         </form>
       </div>
     </div>
