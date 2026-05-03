@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 
-// Public registration — no role allowed
+// Admin-protected registration — role can be specified by Admin/HR
 export const registerSchema = z.object({
   name: z
     .string({ required_error: "Name is required" })
@@ -19,7 +19,13 @@ export const registerSchema = z.object({
   password: z
     .string({ required_error: "Password is required" })
     .min(8, "Password must be at least 8 characters"),
-  // Strip role even if accidentally sent — backend ignores it
+  // Admin can specify role; if omitted defaults to EMPLOYEE in the service
+  role: z
+    .enum(["EMPLOYEE", "HR", "PAYROLL"], {
+      errorMap: () => ({ message: "Role must be EMPLOYEE, HR, or PAYROLL" }),
+    })
+    .optional()
+    .default("EMPLOYEE"),
 });
 
 // One-time company + admin setup

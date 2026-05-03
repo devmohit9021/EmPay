@@ -7,10 +7,10 @@ import * as authService from "../services/auth.service.js";
 
 export const register = async (req, res, next) => {
   try {
-    // role is intentionally NOT passed — backend always assigns EMPLOYEE
-    const { name, email, password } = req.body;
-    const { user, token } = await authService.registerUser({ name, email, password });
-    res.status(201).json({ success: true, message: "Account created. Awaiting role assignment by Admin.", data: { user, token } });
+    // role is validated by registerSchema (EMPLOYEE|HR|PAYROLL) — defaults to EMPLOYEE
+    const { name, email, password, role } = req.body;
+    const { user, token } = await authService.registerUser({ name, email, password, role });
+    res.status(201).json({ success: true, message: "Account created successfully.", data: { user, token } });
   } catch (err) { next(err); }
 };
 

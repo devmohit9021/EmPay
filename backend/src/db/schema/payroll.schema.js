@@ -29,6 +29,7 @@ export const payroll = pgTable(
     baseSalary: numeric("base_salary", { precision: 12, scale: 2 }).notNull(),
     daysPresent: integer("days_present").notNull().default(0),
     leavesTaken: integer("leaves_taken").notNull().default(0),
+    unpaidLeaves: integer("unpaid_leaves").notNull().default(0),
     // Deductions breakdown stored individually for transparency
     pfDeduction: numeric("pf_deduction", { precision: 10, scale: 2 }).notNull(),
     professionalTax: numeric("professional_tax", { precision: 10, scale: 2 }).notNull(),

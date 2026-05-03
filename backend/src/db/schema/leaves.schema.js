@@ -13,6 +13,7 @@ import {
   timestamp,
   pgEnum,
   varchar,
+  integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { employees } from "./employees.schema.js";
@@ -38,6 +39,8 @@ export const leaves = pgTable("leaves", {
   // Path to uploaded supporting document (e.g., medical certificate)
   documentUrl: text("document_url"),
   status: leaveStatusEnum("status").notNull().default("PENDING"),
+  paidDays: integer("paid_days").notNull().default(0),
+  unpaidDays: integer("unpaid_days").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -10,15 +10,15 @@ import { validate } from "../middleware/validate.middleware.js";
 import { createCompanySchema, updateCompanySchema, changeRoleSchema } from "../validators/settings.validators.js";
 
 const router = Router();
-router.use(authenticateUser, authorizeRoles("ADMIN"));
+router.use(authenticateUser);
 
 // Company management
-router.get("/companies", settingsController.getCompanies);
-router.post("/companies", validate(createCompanySchema), settingsController.createCompany);
-router.patch("/companies/:id", validate(updateCompanySchema), settingsController.updateCompany);
+router.get("/companies", settingsController.getCompanies); // Open to all authenticated users
+router.post("/companies", authorizeRoles("ADMIN"), validate(createCompanySchema), settingsController.createCompany);
+router.patch("/companies/:id", authorizeRoles("ADMIN"), validate(updateCompanySchema), settingsController.updateCompany);
 
 // User & Role management
-router.get("/users", settingsController.listAllUsers);
-router.patch("/users/:id/role", validate(changeRoleSchema), settingsController.changeUserRole);
+router.get("/users", authorizeRoles("ADMIN"), settingsController.listAllUsers);
+router.patch("/users/:id/role", authorizeRoles("ADMIN"), validate(changeRoleSchema), settingsController.changeUserRole);
 
 export default router;

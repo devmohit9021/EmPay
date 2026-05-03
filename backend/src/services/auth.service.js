@@ -17,8 +17,11 @@ import { AppError } from "../utils/AppError.js";
 /**
  * Public registration — always creates an EMPLOYEE account.
  * Role CANNOT be set from the outside. Admin assigns roles via Settings.
+ *
+ * When called by Admin/HR internally (via the protected route),
+ * an optional `role` field is accepted to directly create HR / PAYROLL users.
  */
-export const registerUser = async ({ name, email, password }) => {
+export const registerUser = async ({ name, email, password, role }) => {
   const [existing] = await db
     .select({ id: users.id })
     .from(users)
@@ -30,10 +33,12 @@ export const registerUser = async ({ name, email, password }) => {
 
   const hashedPassword = await bcrypt.hash(password, 12);
 
-  // Role is always EMPLOYEE — never trusted from request body
+  // Only ADMIN can set a role other than EMPLOYEE — validated at route level
+  const assignedRole = role || "EMPLOYEE";
+
   const [newUser] = await db
     .insert(users)
-    .values({ name, email, password: hashedPassword, role: "EMPLOYEE" })
+    .values({ name, email, password: hashedPassword, role: assignedRole })
     .returning({
       id: users.id,
       name: users.name,

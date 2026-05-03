@@ -41,8 +41,8 @@ router.post(
 router.get("/me", authenticateUser, authController.getMe);
 router.patch("/profile", authenticateUser, validate(updateProfileSchema), authController.updateProfile);
 
-// Admin: manage all users
-router.get("/users", authenticateUser, authorizeRoles("ADMIN"), authController.getAllUsers);
+// Admin & HR: list all users (for Employee Directory)
+router.get("/users", authenticateUser, authorizeRoles("ADMIN", "HR"), authController.getAllUsers);
 router.patch("/users/:id/role", authenticateUser, authorizeRoles("ADMIN"), validate(changeRoleSchema), authController.updateUserRole);
 
 export default router;

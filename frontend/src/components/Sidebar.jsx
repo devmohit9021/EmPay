@@ -17,12 +17,12 @@ const Sidebar = () => {
   const { user, logout } = useAuth();
 
   const menuItems = [
-    { name: 'Dashboard',   icon: <LayoutDashboard size={20} />, path: '/',           roles: ['ADMIN', 'EMPLOYEE', 'HR', 'PAYROLL'] },
     { name: 'Employees',   icon: <Users size={20} />,           path: '/employees',  roles: ['ADMIN', 'HR', 'PAYROLL'] },
     { name: 'My Profile',  icon: <UserCircle size={20} />,      path: '/profile',    roles: ['EMPLOYEE'] },
     { name: 'Attendance',  icon: <CalendarCheck size={20} />,   path: '/attendance', roles: ['ADMIN', 'EMPLOYEE', 'HR', 'PAYROLL'] },
     { name: 'Time Off',    icon: <Clock size={20} />,           path: '/leaves',     roles: ['ADMIN', 'EMPLOYEE', 'HR', 'PAYROLL'] },
     { name: 'Payroll',     icon: <CreditCard size={20} />,      path: '/payroll',    roles: ['ADMIN', 'EMPLOYEE', 'PAYROLL'] },
+    { name: 'Reports',     icon: <LayoutDashboard size={20} />, path: '/dashboard',  roles: ['ADMIN', 'HR', 'PAYROLL'] },
     { name: 'Settings',    icon: <Settings size={20} />,        path: '/settings',   roles: ['ADMIN'] },
   ];
 

@@ -20,9 +20,9 @@ router.post("/apply", authorizeRoles("EMPLOYEE", "HR", "ADMIN"), handleLeaveUplo
 router.get("/my", authorizeRoles("EMPLOYEE"), leaveController.getMyLeaves);
 router.get("/all", authorizeRoles("ADMIN", "HR", "PAYROLL"), leaveController.getAllLeaves);
 
-// Approval workflow (PAYROLL/ADMIN)
-router.patch("/:id/approve", authorizeRoles("PAYROLL", "ADMIN"), leaveController.approveLeave);
-router.patch("/:id/reject", authorizeRoles("PAYROLL", "ADMIN"), leaveController.rejectLeave);
+// Approval workflow — Admin and HR can approve/reject
+router.patch("/:id/approve", authorizeRoles("HR", "PAYROLL", "ADMIN"), leaveController.approveLeave);
+router.patch("/:id/reject",  authorizeRoles("HR", "PAYROLL", "ADMIN"), leaveController.rejectLeave);
 
 // HR/Admin: allocate leave days to an employee (Issue #11)
 router.post("/allocate", authorizeRoles("HR", "ADMIN"), validate(allocateLeaveSchema), leaveController.allocateLeave);

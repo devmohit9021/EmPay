@@ -17,7 +17,7 @@ export const payrollRunSchema = z.object({
     .number({ required_error: "Year is required", invalid_type_error: "Year must be a number" })
     .int("Year must be an integer")
     .min(2020, "Year must be 2020 or later")
-    .max(currentYear, `Year cannot be in the future (max: ${currentYear})`),
+    .max(2099, "Year must be valid"),
   // Optional: target specific employees; if omitted, runs for all active employees
   employeeIds: z
     .array(z.string().uuid("Each employeeId must be a valid UUID"))

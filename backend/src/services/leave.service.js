@@ -144,28 +144,31 @@ export const approveLeave = async (leaveId) => {
       .returning();
   }
 
-  const remaining = balance.totalGranted - balance.used;
+  const remaining = Math.max(0, balance.totalGranted - balance.used);
+  let paidDays = leaveDays;
+  let unpaidDays = 0;
+
   if (remaining < leaveDays) {
-    throw new AppError(
-      `Insufficient leave balance. Remaining: ${remaining} days, Requested: ${leaveDays} days.`,
-      400
-    );
+    paidDays = remaining;
+    unpaidDays = leaveDays - remaining;
   }
 
-  // Deduct from balance
-  await db
-    .update(leaveBalances)
-    .set({ used: balance.used + leaveDays, updatedAt: new Date() })
-    .where(eq(leaveBalances.id, balance.id));
+  // Deduct from balance only the paid days
+  if (paidDays > 0) {
+    await db
+      .update(leaveBalances)
+      .set({ used: balance.used + paidDays, updatedAt: new Date() })
+      .where(eq(leaveBalances.id, balance.id));
+  }
 
-  // Approve the leave
+  // Approve the leave and store breakdown
   const [updated] = await db
     .update(leaves)
-    .set({ status: "APPROVED" })
+    .set({ status: "APPROVED", paidDays, unpaidDays })
     .where(eq(leaves.id, leaveId))
     .returning();
 
-  return { ...updated, leaveDaysDeducted: leaveDays };
+  return { ...updated, leaveDaysDeducted: paidDays };
 };
 
 /**
@@ -238,18 +241,40 @@ export const countApprovedLeaveDays = async (employeeId, month, year) => {
     .from(leaves)
     .where(and(eq(leaves.employeeId, employeeId), eq(leaves.status, "APPROVED")));
 
-  let total = 0;
+  let totalPaid = 0;
+  let totalUnpaid = 0;
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0);
 
   for (const leave of allApproved) {
     const leaveStart = new Date(leave.startDate);
     const leaveEnd = new Date(leave.endDate);
+
+    // Calculate overlap with the specified month
     const overlapStart = leaveStart > monthStart ? leaveStart : monthStart;
     const overlapEnd = leaveEnd < monthEnd ? leaveEnd : monthEnd;
+    
     if (overlapStart <= overlapEnd) {
-      total += Math.round((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1;
+      // Find how many days overlap in total
+      const overlapDays = Math.round((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1;
+      const totalLeaveDays = Math.round((leaveEnd - leaveStart) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Apportion paid and unpaid days chronologically
+      // Let's iterate over each day in the overlap and check if it falls in the paid or unpaid portion
+      for (let i = 0; i < overlapDays; i++) {
+        const currentDay = new Date(overlapStart);
+        currentDay.setDate(currentDay.getDate() + i);
+        
+        // Find which day of the leave this is (0-indexed)
+        const dayOfLeave = Math.round((currentDay - leaveStart) / (1000 * 60 * 60 * 24));
+        
+        if (dayOfLeave < leave.paidDays) {
+          totalPaid++;
+        } else {
+          totalUnpaid++;
+        }
+      }
     }
   }
-  return total;
+  return { totalPaid, totalUnpaid };
 };

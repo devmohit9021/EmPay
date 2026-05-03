@@ -1,6 +1,6 @@
 /**
- * src/routes/payroll.routes.js — v2
- * Added: GET /payroll (all records for Admin/Payroll dashboard)
+ * src/routes/payroll.routes.js — v3
+ * Full payroll routing with preview, per-employee, and employee self-view.
  */
 
 import { Router } from "express";
@@ -12,7 +12,13 @@ import { payrollRunSchema } from "../validators/payroll.validators.js";
 const router = Router();
 router.use(authenticateUser);
 
-router.get("/", authorizeRoles("ADMIN", "PAYROLL"), payrollController.getAllPayroll);
-router.post("/run", authorizeRoles("ADMIN", "PAYROLL"), validate(payrollRunSchema), payrollController.runPayroll);
+// Admin / Payroll: full access
+router.get("/",        authorizeRoles("ADMIN", "PAYROLL"), payrollController.getAllPayroll);
+router.post("/run",    authorizeRoles("ADMIN", "PAYROLL"), validate(payrollRunSchema), payrollController.runPayroll);
+router.get("/preview", authorizeRoles("ADMIN", "PAYROLL"), payrollController.previewPayroll);
+
+// Per-employee payslip history (Admin / Payroll can view any; employee via /my)
+router.get("/my",               authorizeRoles("EMPLOYEE", "ADMIN", "PAYROLL"), payrollController.getMyPayroll);
+router.get("/employee/:employeeId", authorizeRoles("ADMIN", "PAYROLL"), payrollController.getPayrollByEmployee);
 
 export default router;

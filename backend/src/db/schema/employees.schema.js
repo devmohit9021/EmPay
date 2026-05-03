@@ -21,6 +21,7 @@ import {
   timestamp,
   date,
   text,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { users } from "./users.schema.js";
 import { companies } from "./companies.schema.js";
@@ -54,6 +55,13 @@ export const employees = pgTable("employees", {
 
   // ── Profile ──────────────────────────────────────────────────────────────────
   profilePhoto: text("profile_photo"),  // URL or file path
+  mobile: varchar("mobile", { length: 20 }),
+  location: varchar("location", { length: 255 }),
+  about: text("about"),
+  jobLove: text("job_love"),
+  hobbies: text("hobbies"),
+  skills: jsonb("skills"), // Array of strings or objects
+  certifications: jsonb("certifications"), // Array of strings or objects
 
   // ── Bank details (nullable → show warning if incomplete) ─────────────────────
   bankAccountNo: varchar("bank_account_no", { length: 50 }),

@@ -8,13 +8,13 @@ const MainLayout = () => {
   
   // Mapping paths to titles
   const getTitle = (pathname) => {
-    if (pathname === '/') return 'Dashboard';
-    if (pathname.startsWith('/employees')) return 'Employee Management';
+    if (pathname.startsWith('/employees')) return 'Employees';
     if (pathname.startsWith('/attendance')) return 'Attendance Tracking';
-    if (pathname.startsWith('/leaves')) return 'Leave Management';
+    if (pathname.startsWith('/leaves')) return 'Time Off';
     if (pathname.startsWith('/payroll')) return 'Payroll & Payslips';
     if (pathname.startsWith('/settings')) return 'System Settings';
     if (pathname.startsWith('/profile')) return 'My Profile';
+    if (pathname.startsWith('/dashboard')) return 'Reports & Overview';
     return 'EmPay';
   };
 
